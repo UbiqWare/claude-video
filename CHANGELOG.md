@@ -2,6 +2,16 @@
 
 All notable changes to `/watch` are documented here.
 
+## [0.3.0] — 2026-08-11
+
+### Added
+- **Local multilingual Whisper.** `setup.py --local` installs `whisper.cpp` when needed, downloads the `small` model atomically, and configures local transcription for Claude Code and Codex without uploading audio.
+- **Source-language captions.** Caption discovery uses the video's advertised language instead of requesting English only, with retry/backoff handling for transient subtitle rate limits.
+- **GPU fallback.** Local inference retries with `--no-gpu` when the whisper.cpp Metal backend crashes.
+
+### Changed
+- `--whisper local|groq|openai` now supports explicit local inference; `WATCH_WHISPER_BACKEND=local` is the persistent choice.
+
 ## [0.2.0] — 2026-06-29
 
 ### Added

@@ -19,7 +19,7 @@ from config import frame_cap, get_config  # noqa: E402
 from download import download, fetch_captions, is_url  # noqa: E402
 from frames import MAX_FPS, auto_fps, auto_fps_focus, extract_at_timestamps, extract_keyframes, extract_scene_or_uniform, format_time, get_metadata, merge_frames, parse_time, parse_timestamps  # noqa: E402
 from transcribe import filter_range, format_transcript, parse_vtt  # noqa: E402
-from whisper import load_api_key, transcribe_video  # noqa: E402
+from whisper import load_whisper_backend, transcribe_video  # noqa: E402
 
 
 def main() -> int:
@@ -56,9 +56,9 @@ def main() -> int:
     )
     ap.add_argument(
         "--whisper",
-        choices=["groq", "openai"],
+        choices=["local", "groq", "openai"],
         default=None,
-        help="Force a specific Whisper backend. Default: prefer Groq, fall back to OpenAI.",
+        help="Force local whisper.cpp, Groq, or OpenAI. Default: configured backend, then API.",
     )
     ap.add_argument(
         "--no-dedup",
@@ -237,8 +237,8 @@ def main() -> int:
             print(f"[watch] subtitle parse failed: {exc}", file=sys.stderr)
 
     if not transcript_segments and not args.no_whisper and video_path and meta.get("has_audio"):
-        backend, api_key = load_api_key(args.whisper)
-        if backend and api_key:
+        backend, api_key = load_whisper_backend(args.whisper)
+        if backend and (backend == "local" or api_key):
             try:
                 all_segments, used_backend = transcribe_video(
                     video_path,
@@ -253,13 +253,13 @@ def main() -> int:
                 print(f"[watch] whisper fallback failed: {exc}", file=sys.stderr)
         else:
             hint = (
-                f"--whisper {args.whisper} was set but the matching API key is missing"
+                f"--whisper {args.whisper} was set but its backend is not ready"
                 if args.whisper else
-                "no subtitles and no Whisper API key found"
+                "no subtitles and no local Whisper model or API key found"
             )
             setup_py = SCRIPT_DIR / "setup.py"
             print(
-                f"[watch] {hint} — run `python3 {setup_py}` to enable the Whisper fallback",
+                f"[watch] {hint} — run `python3 {setup_py} --local` or configure an API key",
                 file=sys.stderr,
             )
     elif not transcript_segments and video_path and not meta.get("has_audio"):
@@ -378,8 +378,8 @@ def main() -> int:
         print(
             "_No transcript available — proceed with frames only. "
             "Captions were missing and the Whisper fallback was unavailable "
-            "(no API key set, or `--no-whisper` was used). "
-            f"Run `python3 {setup_py}` to enable Whisper, then re-run._"
+            "(local model/API key missing, or `--no-whisper` was used). "
+            f"Run `python3 {setup_py} --local` or configure an API key, then re-run._"
         )
 
     print()

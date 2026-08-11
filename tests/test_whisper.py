@@ -155,3 +155,20 @@ class TestTranscribeChunks:
 
         with pytest.raises(SystemExit):
             whisper.transcribe_chunks(chunks, always_fail)
+
+
+class TestLocalWhisperJson:
+    def test_converts_whisper_cpp_offsets_to_pipeline_segments(self):
+        data = {
+            "result": {"language": "es"},
+            "transcription": [
+                {"offsets": {"from": 1250, "to": 2875}, "text": " Hola "},
+                {"offsets": {"from": 2875, "to": 3000}, "text": "   "},
+            ],
+        }
+        assert whisper._segments_from_local_json(data) == [
+            {"start": 1.25, "end": 2.88, "text": "Hola"},
+        ]
+
+    def test_missing_transcription_is_empty(self):
+        assert whisper._segments_from_local_json({}) == []

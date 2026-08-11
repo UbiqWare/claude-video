@@ -1,6 +1,6 @@
 # claude-video / watch skill
 
-Agent Skills package that gives an agent a video input. Installable across Claude Code (most common host), Codex, Cursor, GitHub Copilot, and 50+ other [Agent Skills](https://agentskills.io) hosts. Pure-stdlib Python that orchestrates `yt-dlp` + `ffmpeg` and an optional Whisper API.
+UbiqWare downstream of the `bradautomates/claude-video` Agent Skills package. It gives an agent a video input across Claude Code, Codex, Cursor, GitHub Copilot, and other [Agent Skills](https://agentskills.io) hosts. Pure-stdlib Python orchestrates `yt-dlp` + `ffmpeg`, source-language captions, and optional local or API Whisper.
 
 ## Structure
 
@@ -26,8 +26,8 @@ Agent Skills package that gives an agent a video input. Installable across Claud
 
 | Surface | Install |
 |---------|---------|
-| Claude Code | `/plugin marketplace add bradautomates/claude-video` then `/plugin install watch@claude-video` |
-| Codex / Cursor / Copilot / +50 | `npx skills add bradautomates/claude-video -g` |
+| Claude Code | `/plugin marketplace add UbiqWare/claude-video` then `/plugin install watch@claude-video` |
+| Codex / Cursor / Copilot / +50 | `npx skills add UbiqWare/claude-video -g` |
 | claude.ai (web) | upload `dist/watch.skill` (built by `skills/watch/scripts/build-skill.sh`) |
 
 ## Commands
@@ -46,5 +46,7 @@ bash skills/watch/scripts/build-skill.sh   # → dist/watch.skill
 ## Rules
 
 - Keep the version in sync across `skills/watch/SKILL.md` (frontmatter), `.claude-plugin/plugin.json`, and `.codex-plugin/plugin.json` when cutting a release.
+- `python3 skills/watch/scripts/setup.py --local` installs/configures local `whisper.cpp` with the multilingual `small` model under `~/.cache/watch/models`; `WATCH_WHISPER_BACKEND=local` keeps audio on-device.
+- The upstream repository is a source for future updates; this UbiqWare fork is the downstream distribution point. Reconcile upstream changes before publishing a new downstream tag.
 - Releasing: tag `vX.Y.Z` and push the tag; `.github/workflows/release.yml` builds `dist/watch.skill` and attaches it to the GitHub release.
 - Never commit real API keys or `.env` contents; keys live in `~/.config/watch/.env` (mode `0600`) at runtime.

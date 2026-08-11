@@ -54,8 +54,8 @@ def test_keyless_completed_setup_proceeds_silently(tmp_path):
     assert js["can_proceed"] is True
     assert js["first_run"] is False
     assert js["setup_complete"] is True
-    # status still encourages a key even though we can proceed
-    assert js["status"] == "needs_key"
+    # status still encourages local Whisper or a key even though we can proceed
+    assert js["status"] == "needs_key_or_local_model"
 
 
 def test_keyless_first_run_is_encouraged(tmp_path):

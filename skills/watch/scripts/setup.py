@@ -4,6 +4,7 @@
 Modes:
   setup.py --check      Silent preflight. Exit 0 if ready, 2/3/4 on failure.
   setup.py --json       Machine-readable status for Claude to parse.
+  setup.py --local      Install whisper.cpp if needed and download the multilingual small model.
   setup.py              Installer. Auto-installs deps, scaffolds .env, marks SETUP_COMPLETE.
 
 Design:
@@ -30,6 +31,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 from config import get_config  # noqa: E402
+from whisper import download_local_model, find_local_binary, local_model_name, local_model_path  # noqa: E402
 
 
 REQUIRED_BINARIES = ["ffmpeg", "ffprobe", "yt-dlp"]
@@ -56,6 +58,9 @@ OPENAI_API_KEY=
 # Allowed values: transcript | efficient | balanced | token-burner
 # Keep the value on its own line with no trailing comment.
 # WATCH_DETAIL=balanced
+
+# Set WATCH_WHISPER_BACKEND=local to use whisper.cpp without uploading audio.
+# WATCH_WHISPER_MODEL=small
 """
 
 
@@ -119,6 +124,35 @@ def _have_api_key() -> tuple[bool, str | None]:
     if _read_env_key("OPENAI_API_KEY"):
         return True, "openai"
     return False, None
+
+
+def _local_backend_ready() -> bool:
+    return bool(find_local_binary() and local_model_path().is_file())
+
+
+def _set_config_value(name: str, value: str) -> None:
+    """Set a non-secret watch setting without disturbing API keys."""
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    lines = CONFIG_FILE.read_text(encoding="utf-8").splitlines() if CONFIG_FILE.exists() else []
+    replacement = f"{name}={value}"
+    found = False
+    output: list[str] = []
+    for line in lines:
+        if line.strip().startswith(f"{name}="):
+            if not found:
+                output.append(replacement)
+                found = True
+        else:
+            output.append(line)
+    if not found:
+        if output and output[-1] != "":
+            output.append("")
+        output.append(replacement)
+    CONFIG_FILE.write_text("\n".join(output).rstrip() + "\n", encoding="utf-8")
+    try:
+        CONFIG_FILE.chmod(0o600)
+    except OSError:
+        pass
 
 
 def is_first_run() -> bool:
@@ -228,18 +262,19 @@ def _status() -> dict:
     """
     missing = _check_binaries()
     has_key, backend = _have_api_key()
+    local_ready = _local_backend_ready()
     setup_complete = not is_first_run()
 
-    if not missing and has_key:
+    if not missing and (has_key or local_ready):
         status = "ready"
-    elif missing and not has_key:
+    elif missing and not has_key and not local_ready:
         status = "needs_install_and_key"
     elif missing:
         status = "needs_install"
     else:
-        status = "needs_key"
+        status = "needs_key_or_local_model"
 
-    can_proceed = (not missing) and (has_key or setup_complete)
+    can_proceed = (not missing) and (has_key or local_ready or setup_complete)
 
     cfg = get_config()
     return {
@@ -250,6 +285,9 @@ def _status() -> dict:
         "missing_binaries": missing,
         "whisper_backend": backend,
         "has_api_key": has_key,
+        "local_backend_ready": local_ready,
+        "local_binary": find_local_binary(),
+        "local_model": str(local_model_path()),
         "config_file": str(CONFIG_FILE),
         "watch_detail": cfg["detail"],
         "platform": platform.system(),
@@ -275,12 +313,12 @@ def cmd_check() -> int:
     parts = []
     if s["missing_binaries"]:
         parts.append(f"missing binaries: {', '.join(s['missing_binaries'])}")
-    if not s["has_api_key"] and not s["setup_complete"]:
-        parts.append("no Whisper API key (GROQ_API_KEY or OPENAI_API_KEY)")
+    if not s["has_api_key"] and not s["local_backend_ready"] and not s["setup_complete"]:
+        parts.append("no Whisper API key or ready local whisper.cpp model")
     installer = Path(__file__).resolve()
     sys.stderr.write(
         f"[watch] setup incomplete ({'; '.join(parts)}). "
-        f"Run: python3 {installer}\n"
+        f"Run: python3 {installer} --local or configure an API key.\n"
     )
     sys.stderr.flush()
 
@@ -289,6 +327,39 @@ def cmd_check() -> int:
     if s["missing_binaries"]:
         return 2
     return 3
+
+
+def cmd_local() -> int:
+    """Install and configure the local whisper.cpp multilingual backend."""
+    missing = _check_binaries()
+    if missing:
+        if platform.system() == "Darwin":
+            ok, msg = _install_macos(missing)
+            print(f"[setup] {msg}", file=sys.stderr)
+            if not ok:
+                return 2
+        else:
+            print("[setup] required binaries are missing: " + ", ".join(missing), file=sys.stderr)
+            return 2
+
+    if not find_local_binary():
+        if platform.system() == "Darwin" and _which("brew") is not None:
+            print("[setup] installing whisper-cpp via brew", file=sys.stderr)
+            result = subprocess.run(["brew", "install", "whisper-cpp"])
+            if result.returncode != 0 or not find_local_binary():
+                return 2
+        else:
+            print("[setup] whisper.cpp (`whisper-cli`) is not installed.", file=sys.stderr)
+            return 2
+
+    _scaffold_env()
+    model = download_local_model()
+    _set_config_value("WATCH_WHISPER_BACKEND", "local")
+    _set_config_value("WATCH_WHISPER_MODEL", local_model_name())
+    _write_setup_complete()
+    print(f"[setup] local Whisper ready: {model}")
+    print("[setup] audio stays on this machine; no Whisper API key is required.")
+    return 0
 
 
 def cmd_json() -> int:
@@ -357,6 +428,8 @@ def main() -> int:
             return cmd_check()
         if arg == "--json":
             return cmd_json()
+        if arg == "--local":
+            return cmd_local()
     return cmd_install()
 
 
