@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Transcribe a video locally or via Groq/OpenAI Whisper APIs.
 
-The local backend uses whisper.cpp with the multilingual ``small`` model.
+The local backend uses whisper.cpp with the multilingual ``large-v3-turbo`` model.
 Both backends return segments in the same shape as transcribe.parse_vtt so the
 rest of the pipeline does not care where the transcript came from.
 
@@ -31,10 +31,22 @@ GROQ_MODEL = "whisper-large-v3"
 OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions"
 OPENAI_MODEL = "whisper-1"
 
-LOCAL_MODEL_DEFAULT = "small"
+LOCAL_MODEL_DEFAULT = "large-v3-turbo"
 LOCAL_MODEL_DIR = Path.home() / ".cache" / "watch" / "models"
 LOCAL_MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-{name}.bin"
-LOCAL_MODEL_NAMES = {"tiny", "base", "small", "medium", "large-v1", "large-v2", "large-v3"}
+# large-v3-turbo is the default: on Apple Silicon (Metal) it runs close to the
+# smaller models while keeping large-v3 accuracy, which matters for domain
+# vocabulary and proper nouns — where `small` degrades noticeably.
+LOCAL_MODEL_NAMES = {
+    "tiny",
+    "base",
+    "small",
+    "medium",
+    "large-v1",
+    "large-v2",
+    "large-v3",
+    "large-v3-turbo",
+}
 
 # Both Groq's free tier and OpenAI whisper-1 cap uploads at 25 MB. We target a
 # margin under that so multipart framing overhead never pushes a chunk over.
@@ -469,7 +481,7 @@ def transcribe_local(video_path: str, audio_out: Path) -> tuple[list[dict], str]
     if not model.is_file():
         raise SystemExit(
             f"local Whisper model not found at {model}. "
-            "Run `python3 setup.py --local` to download the multilingual small model."
+            "Run `python3 setup.py --local` to download the multilingual large-v3-turbo model."
         )
 
     print("[watch] extracting audio for local Whisper", file=sys.stderr)

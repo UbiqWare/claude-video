@@ -4,7 +4,7 @@
 Modes:
   setup.py --check      Silent preflight. Exit 0 if ready, 2/3/4 on failure.
   setup.py --json       Machine-readable status for Claude to parse.
-  setup.py --local      Install whisper.cpp if needed and download the multilingual small model.
+  setup.py --local      Install whisper.cpp if needed and download the multilingual large-v3-turbo model.
   setup.py              Installer. Auto-installs deps, scaffolds .env, marks SETUP_COMPLETE.
 
 Design:
@@ -60,7 +60,9 @@ OPENAI_API_KEY=
 # WATCH_DETAIL=balanced
 
 # Set WATCH_WHISPER_BACKEND=local to use whisper.cpp without uploading audio.
-# WATCH_WHISPER_MODEL=small
+# Allowed models: tiny | base | small | medium | large-v1 | large-v2
+#                 | large-v3 | large-v3-turbo   (default)
+# WATCH_WHISPER_MODEL=large-v3-turbo
 """
 
 

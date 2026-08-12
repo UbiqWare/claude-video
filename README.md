@@ -45,7 +45,7 @@ With Claude Video `/watch` you can paste a URL or a local path, ask a question, 
 1. **You paste a video and a question.** URL (anything yt-dlp supports — YouTube, Loom, TikTok, X, Instagram, plus a few hundred more) or a local path (`.mp4`, `.mov`, `.mkv`, `.webm`).
 2. **`yt-dlp` checks captions first.** At `transcript` detail, captioned URLs return without downloading video. Otherwise, or when Whisper needs audio, it downloads only what the run needs.
 3. **`ffmpeg` extracts frames at the chosen detail.** `efficient` decodes keyframes only (near-instant); `balanced`/`token-burner` prefer scene-change frames and fall back to the duration-aware uniform sampler when they under-produce. JPEGs are 512px wide by default and clamped to 1998px tall for Claude Read compatibility.
-4. **The transcript comes from one of three places.** First try: `yt-dlp` discovers the source language and pulls native captions (manual or auto-generated). If captions are unavailable, local `whisper.cpp` with the multilingual `small` model keeps audio on-device. API fallback remains available through Groq's `whisper-large-v3` or OpenAI's `whisper-1`.
+4. **The transcript comes from one of three places.** First try: `yt-dlp` discovers the source language and pulls native captions (manual or auto-generated). If captions are unavailable, local `whisper.cpp` with the multilingual `large-v3-turbo` model keeps audio on-device. API fallback remains available through Groq's `whisper-large-v3` or OpenAI's `whisper-1`.
 5. **Frames + transcript are handed to Claude.** The script prints frame paths with `t=MM:SS` markers and the transcript with timestamps. Claude `Read`s each frame in parallel — JPEGs render directly as images in its context.
 6. **Claude answers grounded in what's actually on screen and in the audio.** Not "based on the description" or "according to the title." It saw the frames. It heard the transcript. It answers the way someone who watched the video would.
 7. **Cleanup.** The script prints a working directory at the end. If you're not asking follow-ups, Claude removes it.
@@ -157,7 +157,7 @@ On the first `/watch` call, the skill runs `scripts/setup.py --check`. If `ffmpe
 - **macOS** — auto-runs `brew install ffmpeg yt-dlp`.
 - **Linux** — prints the exact `apt` / `dnf` / `pipx` commands.
 - **Windows** — prints the `winget` / `pip` commands.
-- **Local Whisper** — run `python3 skills/watch/scripts/setup.py --local` to install `whisper.cpp` on macOS and download the multilingual `small` model to `~/.cache/watch/models`.
+- **Local Whisper** — run `python3 skills/watch/scripts/setup.py --local` to install `whisper.cpp` on macOS and download the multilingual `large-v3-turbo` model to `~/.cache/watch/models`.
 
 After setup, preflight is silent and `/watch` just works. The check is a sub-100ms lookup, so it doesn't slow you down on subsequent runs.
 
@@ -168,7 +168,7 @@ Captions cover the majority of public videos for free. The Whisper fallback only
 | Capability | What you need | Cost |
 |------------|---------------|------|
 | Download + native captions | `yt-dlp` + `ffmpeg` | Free |
-| Local Whisper fallback | `whisper.cpp` + multilingual `small` model | Local CPU/GPU |
+| Local Whisper fallback | `whisper.cpp` + multilingual `large-v3-turbo` model | Local CPU/GPU |
 | Whisper fallback (preferred) | [Groq API key](https://console.groq.com/keys) — `whisper-large-v3` | Cheap, fast |
 | Whisper fallback (alt) | [OpenAI API key](https://platform.openai.com/api-keys) — `whisper-1` | Standard pricing |
 | Disable Whisper entirely | `--no-whisper` | Free, frames-only when no captions |

@@ -46,7 +46,7 @@ bash skills/watch/scripts/build-skill.sh   # → dist/watch.skill
 ## Rules
 
 - Keep the version in sync across `skills/watch/SKILL.md` (frontmatter), `.claude-plugin/plugin.json`, and `.codex-plugin/plugin.json` when cutting a release.
-- `python3 skills/watch/scripts/setup.py --local` installs/configures local `whisper.cpp` with the multilingual `small` model under `~/.cache/watch/models`; `WATCH_WHISPER_BACKEND=local` keeps audio on-device.
+- `python3 skills/watch/scripts/setup.py --local` installs/configures local `whisper.cpp` with the multilingual `large-v3-turbo` model under `~/.cache/watch/models`; `WATCH_WHISPER_BACKEND=local` keeps audio on-device.
 - The upstream repository is a source for future updates; this UbiqWare fork is the downstream distribution point. Reconcile upstream changes before publishing a new downstream tag.
 - Releasing: tag `vX.Y.Z` and push the tag; `.github/workflows/release.yml` builds `dist/watch.skill` and attaches it to the GitHub release.
 - Never commit real API keys or `.env` contents; keys live in `~/.config/watch/.env` (mode `0600`) at runtime.

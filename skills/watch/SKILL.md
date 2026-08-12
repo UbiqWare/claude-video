@@ -55,7 +55,7 @@ Branch on two fields:
   3. Offer local Whisper first. If the user wants it, run `python3 "${SKILL_DIR}/scripts/setup.py" --local`; otherwise configure an API key or continue without Whisper.
 - **`can_proceed: false` and `first_run: false`** → setup was finished before but the environment regressed (e.g. `missing_binaries` after an OS change). Run the installer to remediate, then proceed. Don't re-ask preferences.
 
-A Whisper API key is optional: `python3 "${SKILL_DIR}/scripts/setup.py" --local` installs/configures local `whisper.cpp` with the multilingual `small` model and keeps audio on-device.
+A Whisper API key is optional: `python3 "${SKILL_DIR}/scripts/setup.py" --local` installs/configures local `whisper.cpp` with the multilingual `large-v3-turbo` model and keeps audio on-device.
 
 On follow-up `/watch` calls in the same session, use the silent check:
 
@@ -223,7 +223,7 @@ Behavior:
 The script gets a timestamped transcript in one of three ways:
 
 1. **Native captions (free, preferred).** yt-dlp discovers the video's source language and pulls manual or auto-generated subtitles in that language when available.
-2. **Local Whisper fallback.** If captions are unavailable, `whisper.cpp` transcribes with the multilingual `small` model. Run `python3 "${SKILL_DIR}/scripts/setup.py" --local`; audio remains on the machine. Set `WATCH_WHISPER_LANGUAGE=es` to force a language, or leave it as `auto`.
+2. **Local Whisper fallback.** If captions are unavailable, `whisper.cpp` transcribes with the multilingual `large-v3-turbo` model. Run `python3 "${SKILL_DIR}/scripts/setup.py" --local`; audio remains on the machine. Set `WATCH_WHISPER_LANGUAGE=es` to force a language, or leave it as `auto`.
 3. **Whisper API fallback.** If local Whisper is not selected and no captions came back, the script extracts audio (`ffmpeg -vn -ac 1 -ar 16000 -b:a 64k`, ~0.5 MB/min) and uploads it to whichever API has a key configured:
    - **Groq** — `whisper-large-v3`. Preferred default: cheaper, faster. Get a key at console.groq.com/keys.
    - **OpenAI** — `whisper-1`. Fallback. Get a key at platform.openai.com/api-keys.
@@ -252,7 +252,7 @@ If you already watched a video this session and the user asks a follow-up, do **
 **What this skill does:**
 - Runs `yt-dlp` locally to download the video and pull native captions when the source supports them (public data; the request goes directly to whatever host the URL points at)
 - Runs `ffmpeg` / `ffprobe` locally to extract frames as JPEGs and, when Whisper is needed, a mono 16 kHz audio clip
-- Can transcribe the extracted audio locally with `whisper.cpp` and the multilingual `small` model when `WATCH_WHISPER_BACKEND=local` or `--whisper local` is selected
+- Can transcribe the extracted audio locally with `whisper.cpp` and the multilingual `large-v3-turbo` model when `WATCH_WHISPER_BACKEND=local` or `--whisper local` is selected
 - Sends the extracted audio clip to Groq's Whisper API (`api.groq.com/openai/v1/audio/transcriptions`) only when the Groq backend is selected
 - Sends the extracted audio clip to OpenAI's audio transcription API (`api.openai.com/v1/audio/transcriptions`) only when the OpenAI backend is selected
 - Writes the downloaded video, frames, audio, and an intermediate transcript to a working directory under the system temp dir (or `--out-dir` if specified) so Claude can `Read` them
