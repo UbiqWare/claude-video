@@ -2,7 +2,7 @@
 
 All notable changes to `/watch` are documented here.
 
-## [Unreleased]
+## [0.4.0] — 2026-08-12
 
 ### Changed
 - **Local Whisper defaults to `large-v3-turbo`** instead of `small`, and that model is now accepted in `WATCH_WHISPER_MODEL`. On Apple Silicon (Metal) it runs close to the smaller models while keeping large-v3 accuracy, which matters for domain vocabulary and proper nouns. The download is larger (~1.5 GB vs ~465 MB); set `WATCH_WHISPER_MODEL=small` to keep the previous behaviour, or `WATCH_WHISPER_MODEL_PATH` to use a model stored outside the skill's cache directory.
