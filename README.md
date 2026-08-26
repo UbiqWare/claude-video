@@ -17,11 +17,11 @@
 > If `/watch` is useful to you, the right place to say so is his channel:
 > [YouTube (@bradbonanno)](https://www.youtube.com/@bradbonanno).
 >
-> **What this fork adds** (all merged upstream-compatible, see [CHANGELOG.md](CHANGELOG.md)):
+> **What this fork adds** (all designed to remain compatible with upstream, see [CHANGELOG.md](CHANGELOG.md)):
 > local multilingual Whisper via `whisper.cpp` (v0.3.0), source-language caption discovery with
 > rate-limit retries (v0.3.0), and `large-v3-turbo` as the default local model (v0.4.0).
 
-Claude Code (recommended — auto-updates via marketplace):
+Claude Code (recommended — installed and updated via the marketplace):
 ```
 /plugin marketplace add UbiqWare/claude-video
 /plugin install watch@claude-video
@@ -345,8 +345,25 @@ bundle is built locally with `build-skill.sh` and attached to the release by han
 
 ⚠️ **Every `gh` command against this fork needs `--repo UbiqWare/claude-video`.** `gh` resolves
 by default against the **parent** repository, not the fork, and being inside the fork's clone is
-not enough. Without it, `gh release create` targets the upstream repo and `gh run list` mixes in
-the parent's runs.
+**not** enough — `origin` pointing at UbiqWare does not change it. Reproduce it from a clone of
+this repo:
+
+```console
+$ gh repo view --json nameWithOwner --jq .nameWithOwner
+bradautomates/claude-video          # ← the parent, not this fork
+
+$ gh release list | head -1
+v0.2.0  Latest  …                   # ← upstream's releases; ours is at v0.4.0
+```
+
+This is not a precaution reserved for publishing commands. A read is just as wrong, only
+quieter: `gh release list` above reports a stale "latest", and `gh run list` mixes in the
+parent's runs — which once led to concluding that a workflow of ours had run when the fork had
+`total_count: 0`. On a write it is worse: `gh release create` without `--repo` **targets the
+upstream repository**, and it only failed here because the tag did not exist there yet.
+
+**Diagnostic heuristic**: if a `gh` command returns something odd or empty in this repo, check
+first whether `--repo` is missing.
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
@@ -356,7 +373,14 @@ MIT license.
 
 Built on `yt-dlp`, `ffmpeg`, and Claude's multimodal `Read` tool. Local Whisper uses [whisper.cpp](https://github.com/ggerganov/whisper.cpp); remote transcription is available via [Groq](https://groq.com) or [OpenAI](https://openai.com).
 
-Built by Brad Bonanno — I make content about building with AI on [YouTube (@bradbonanno)](https://www.youtube.com/@bradbonanno), and build AI operating systems for businesses at [Solaris Automation](https://www.solarisautomation.io/). If `/watch` saves you from scrubbing through a video, come say hi on the channel.
+**The original project was created by Brad Bonanno** — he makes content about building with AI
+on [YouTube (@bradbonanno)](https://www.youtube.com/@bradbonanno) and builds AI operating systems
+for businesses at [Solaris Automation](https://www.solarisautomation.io/). If `/watch` saves you
+from scrubbing through a video, his channel is the place to say so.
+
+**This fork is maintained by UbiqWare.** Issues and pull requests about the fork belong here;
+anything about the original project belongs
+[upstream](https://github.com/bradautomates/claude-video).
 
 ## Star History — the original project
 
