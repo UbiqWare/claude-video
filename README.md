@@ -27,7 +27,8 @@ Claude Code (recommended — installed and updated via the marketplace):
 /plugin install watch@claude-video
 ```
 
-Codex, Cursor, Copilot, Gemini CLI, or any of 50+ [Agent Skills](https://agentskills.io) hosts:
+Codex — and, in principle, any of the 50+ [Agent Skills](https://agentskills.io) hosts, though
+**only Claude Code and Codex have been tested** (see [Install](#install)):
 ```bash
 npx skills add UbiqWare/claude-video -g
 ```
@@ -122,7 +123,8 @@ attribution and as the `upstream` git remote — never as an install source.
 | Surface | Install | Verified |
 |---------|---------|----------|
 | **Claude Code** | `/plugin marketplace add UbiqWare/claude-video` then `/plugin install watch@claude-video` | ✅ `.claude-plugin/marketplace.json` declares `watch`; this is how it is installed here |
-| **Codex, Cursor, Copilot, Gemini CLI, +50 more** | `npx skills add UbiqWare/claude-video -g` | ✅ the CLI clones the fork and finds the `watch` skill (checked with `--list`) |
+| **Codex** | `npx skills add UbiqWare/claude-video -g` | ✅ installed and running here; the CLI clones the fork and finds the `watch` skill (checked with `--list`) |
+| **Cursor, Copilot, Gemini CLI, +50 more** | `npx skills add UbiqWare/claude-video -g` | ⚠️ **untested** — same command, but no one here has run it on those hosts |
 | **claude.ai** (web) | [Download `watch.skill`](https://github.com/UbiqWare/claude-video/releases/latest) → Settings → Capabilities → Skills → `+` | ✅ `v0.4.0` has `watch.skill` attached (built and uploaded by hand — releases here are manual) |
 | **Manual / dev** | `git clone` then symlink `skills/watch` into your host's skills dir (see below) | ✅ |
 
@@ -135,7 +137,14 @@ attribution and as the `upstream` git remote — never as an install source.
 
 Update later with `/plugin update watch@claude-video`.
 
-### Codex, Cursor, Copilot, Gemini CLI, and 50+ other hosts
+### Codex — and other Agent Skills hosts
+
+> **Tested surfaces: Claude Code and Codex only.** Those are the two this fork is developed and
+> run on. The [Agent Skills](https://agentskills.io) CLI advertises 50+ hosts (Cursor, Copilot,
+> Gemini CLI and the rest) and the skill is built to be host-agnostic — `SKILL.md` resolves its
+> own scripts relative to wherever it was installed — but **we have not verified any of them**.
+> They should work; treat them as unverified until you try. If you do, an issue reporting how it
+> went is welcome.
 
 The [Agent Skills](https://agentskills.io) CLI installs the skill into whatever agents it detects:
 
