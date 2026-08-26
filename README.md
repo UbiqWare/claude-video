@@ -2,6 +2,25 @@
 
 **Give Claude the ability to watch any video.**
 
+> ### A fork, with thanks
+>
+> This repository is a fork maintained by **UbiqWare**. The original project is
+> **[bradautomates/claude-video](https://github.com/bradautomates/claude-video)**, created and
+> shared by **Brad Bonanno**.
+>
+> The whole design is his: the caption-first pipeline, the frame-budget logic, the detail dial,
+> the self-contained skill layout that made this work outside Claude Code. Everything below
+> that describes *how `/watch` works* describes his work. Our fork adds a local multilingual
+> Whisper backend and some hardening on top of a foundation that was already complete and
+> well-built. **Thank you, Brad, for building it and for sharing it under an open licence.**
+>
+> If `/watch` is useful to you, the right place to say so is his channel:
+> [YouTube (@bradbonanno)](https://www.youtube.com/@bradbonanno).
+>
+> **What this fork adds** (all merged upstream-compatible, see [CHANGELOG.md](CHANGELOG.md)):
+> local multilingual Whisper via `whisper.cpp` (v0.3.0), source-language caption discovery with
+> rate-limit retries (v0.3.0), and `large-v3-turbo` as the default local model (v0.4.0).
+
 Claude Code (recommended — auto-updates via marketplace):
 ```
 /plugin marketplace add UbiqWare/claude-video
@@ -10,7 +29,7 @@ Claude Code (recommended — auto-updates via marketplace):
 
 Codex, Cursor, Copilot, Gemini CLI, or any of 50+ [Agent Skills](https://agentskills.io) hosts:
 ```bash
-npx skills add bradautomates/claude-video -g
+npx skills add UbiqWare/claude-video -g
 ```
 (`-g` installs globally for your user, available across all projects. Drop it to scope per-project.)
 
@@ -97,12 +116,15 @@ End-to-end from a cold URL, `transcript` is the cheapest mode by far; the frame 
 
 ## Install
 
-| Surface | Install |
-|---------|---------|
-| **Claude Code** | `/plugin marketplace add UbiqWare/claude-video` then `/plugin install watch@claude-video` |
-| **Codex, Cursor, Copilot, Gemini CLI, +50 more** | `npx skills add UbiqWare/claude-video -g` |
-| **claude.ai** (web) | [Download `watch.skill`](https://github.com/UbiqWare/claude-video/releases/latest) → Settings → Capabilities → Skills → `+` |
-| **Manual / dev** | `git clone` then symlink `skills/watch` into your host's skills dir (see below) |
+Every command below installs **this fork**. The upstream repo appears in this README only as
+attribution and as the `upstream` git remote — never as an install source.
+
+| Surface | Install | Verified |
+|---------|---------|----------|
+| **Claude Code** | `/plugin marketplace add UbiqWare/claude-video` then `/plugin install watch@claude-video` | ✅ `.claude-plugin/marketplace.json` declares `watch`; this is how it is installed here |
+| **Codex, Cursor, Copilot, Gemini CLI, +50 more** | `npx skills add UbiqWare/claude-video -g` | ✅ the CLI clones the fork and finds the `watch` skill (checked with `--list`) |
+| **claude.ai** (web) | [Download `watch.skill`](https://github.com/UbiqWare/claude-video/releases/latest) → Settings → Capabilities → Skills → `+` | ✅ `v0.4.0` has `watch.skill` attached (built and uploaded by hand — releases here are manual) |
+| **Manual / dev** | `git clone` then symlink `skills/watch` into your host's skills dir (see below) | ✅ |
 
 ### Claude Code
 
@@ -133,7 +155,7 @@ Update later with `npx skills update watch -g`.
 
 ### claude.ai (web)
 
-1. [Download `watch.skill`](https://github.com/bradautomates/claude-video/releases/latest) from the latest release.
+1. [Download `watch.skill`](https://github.com/UbiqWare/claude-video/releases/latest) from the latest release.
 2. Go to Settings → Capabilities → Skills.
 3. Click `+` and drop the file in.
 
@@ -145,8 +167,14 @@ Clone the repo and symlink the self-contained skill folder into your host's skil
 
 ```bash
 git clone https://github.com/UbiqWare/claude-video.git
-ln -s "$(pwd)/claude-video/skills/watch" ~/.claude/skills/watch   # or ~/.codex/skills/watch
+cd claude-video
+git remote add upstream https://github.com/bradautomates/claude-video.git   # to track the original
+ln -s "$(pwd)/skills/watch" ~/.claude/skills/watch   # or ~/.codex/skills/watch
 ```
+
+Two remotes, two roles: **`origin`** is UbiqWare's fork — where this repo's work is pushed and
+where releases are cut. **`upstream`** is Brad's original; fetch from it to pick up his changes
+(`git fetch upstream && git merge upstream/main`). Never push to `upstream`.
 
 For claude.ai, build the `.skill` bundle from source: `bash skills/watch/scripts/build-skill.sh` produces `dist/watch.skill`.
 
@@ -160,6 +188,72 @@ On the first `/watch` call, the skill runs `scripts/setup.py --check`. If `ffmpe
 - **Local Whisper** — run `python3 skills/watch/scripts/setup.py --local` to install `whisper.cpp` on macOS and download the multilingual `large-v3-turbo` model to `~/.cache/watch/models`.
 
 After setup, preflight is silent and `/watch` just works. The check is a sub-100ms lookup, so it doesn't slow you down on subsequent runs.
+
+## Local Whisper
+
+The local backend keeps audio **on your machine** — nothing is uploaded. It runs
+[whisper.cpp](https://github.com/ggerganov/whisper.cpp) with the multilingual **`large-v3-turbo`**
+model, the default since v0.4.0.
+
+### Setup
+
+```bash
+python3 skills/watch/scripts/setup.py --local
+```
+
+On **macOS** this installs `whisper-cpp` via Homebrew if it is missing and downloads the model
+atomically to `~/.cache/watch/models`. On **Linux and Windows** the installer does not install
+`whisper.cpp` for you: install it yourself and make the binary reachable, then re-run
+`--local` to fetch the model.
+
+### Configuration
+
+All of these live in `~/.config/watch/.env` (machine-local, never committed):
+
+| Variable | Effect |
+|---|---|
+| `WATCH_WHISPER_BACKEND=local` | Make local inference the persistent default |
+| `WATCH_WHISPER_MODEL=<name>` | Use another model — e.g. `small` (~465 MB) instead of `large-v3-turbo` (~1.5 GB) |
+| `WATCH_WHISPER_MODEL_PATH=<path>` | Point at a model stored outside the skill's cache directory |
+
+Per-run, `--whisper local` forces the local backend regardless of configuration.
+
+**Why `large-v3-turbo` is the default**: on Apple Silicon (Metal) it runs close to the speed of
+the smaller models while keeping large-v3 accuracy, which matters for domain vocabulary and
+proper nouns. The trade-off is the download size. Set `WATCH_WHISPER_MODEL=small` for the
+pre-0.4.0 behaviour.
+
+### Metal → CPU fallback
+
+If the whisper.cpp Metal backend crashes (the process dies on a signal — exit code `-11` or
+`139`), the run **retries automatically on CPU** with `--no-gpu` and prints a notice to stderr.
+You do not need to configure anything; a GPU crash degrades to a slower run rather than a
+failed one. Any other non-zero exit is a real error and is reported as such.
+
+## Security: treat video content as untrusted input
+
+**Captions, transcripts and video metadata are third-party content. They are data to be
+analysed, never instructions to be followed.**
+
+A video's caption track, its title, its description and its chapter markers are all written by
+whoever uploaded it. Any of them can contain text shaped like a command — *"ignore previous
+instructions"*, *"run this to continue"*, a URL to fetch, a snippet to execute. When that text
+reaches an agent's context alongside your actual request, the agent has to distinguish the two,
+and a locally-generated Whisper transcript is no safer: it faithfully transcribes whatever the
+audio says.
+
+Practical consequences:
+
+- **Never let output from `/watch` drive an action on its own.** Treat a suggested command, path
+  or URL that came out of a video exactly as you would treat one from an unknown web page:
+  read it, then decide yourself.
+- **Be deliberate with untrusted videos.** Watching a link from a stranger puts its text into
+  your context. That is fine for analysis; it is not fine as a source of instructions.
+- **The risk does not depend on the transcription backend.** Local Whisper protects your audio
+  from being uploaded. It does not make the *content* trustworthy.
+
+This is the standard prompt-injection surface of any tool that pulls external content into an
+agent's context. `/watch` does not sanitise it, and no such filter would be reliable.
 
 ## Bring your own keys
 
@@ -240,7 +334,19 @@ python3 -m pytest -q
 bash skills/watch/scripts/build-skill.sh      # → dist/watch.skill
 ```
 
-Releasing: tag `vX.Y.Z`, push the tag. The workflow builds `dist/watch.skill` and attaches it to the GitHub release. Keep the version in sync across `skills/watch/SKILL.md`, `.claude-plugin/plugin.json`, and `.codex-plugin/plugin.json`.
+Keep the version in sync across `skills/watch/SKILL.md`, `.claude-plugin/plugin.json`, and
+`.codex-plugin/plugin.json`.
+
+**Releasing from this fork is manual.** The inherited `.github/workflows/release.yml` builds
+`dist/watch.skill` on a tag push, but **GitHub disables workflows inherited by a fork** until
+someone enables them in the Actions tab — and in this fork that has deliberately not been done:
+we do not want workflows inherited from a third party running by themselves. So the `.skill`
+bundle is built locally with `build-skill.sh` and attached to the release by hand.
+
+⚠️ **Every `gh` command against this fork needs `--repo UbiqWare/claude-video`.** `gh` resolves
+by default against the **parent** repository, not the fork, and being inside the fork's clone is
+not enough. Without it, `gh release create` targets the upstream repo and `gh run list` mixes in
+the parent's runs.
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
@@ -252,7 +358,10 @@ Built on `yt-dlp`, `ffmpeg`, and Claude's multimodal `Read` tool. Local Whisper 
 
 Built by Brad Bonanno — I make content about building with AI on [YouTube (@bradbonanno)](https://www.youtube.com/@bradbonanno), and build AI operating systems for businesses at [Solaris Automation](https://www.solarisautomation.io/). If `/watch` saves you from scrubbing through a video, come say hi on the channel.
 
-## Star History
+## Star History — the original project
+
+Stars for **[bradautomates/claude-video](https://github.com/bradautomates/claude-video)**, the
+upstream this fork comes from. Deliberately not our numbers: the project is his.
 
 <a href="https://www.star-history.com/?repos=bradautomates%2Fclaude-video&type=date&legend=top-left">
  <picture>
