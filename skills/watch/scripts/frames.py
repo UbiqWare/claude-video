@@ -8,6 +8,7 @@ zooming in for detail).
 """
 from __future__ import annotations
 
+import functools
 import json
 import re
 import shutil
@@ -37,6 +38,26 @@ MAX_READ_DIMENSION = 1998
 DEDUP_THUMB = 16
 DEDUP_THRESHOLD = 2.0
 SHOWINFO_TS_RE = re.compile(r"pts_time:([0-9.]+)")
+
+
+@functools.lru_cache(maxsize=1)
+def _vfr_args() -> tuple[str, ...]:
+    """Variable-frame-rate output flag, resolved for the installed ffmpeg.
+
+    ``-vsync`` was deprecated in favour of ``-fps_mode`` (ffmpeg 5.1) and
+    *removed* in ffmpeg 9, where passing it aborts with "Unrecognized option".
+    Probe once per process and cache; fall back to ``-vsync`` for ffmpeg < 5.1.
+    """
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-help", "long"],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ("-fps_mode", "vfr")
+    if "-fps_mode" in (result.stdout or "") + (result.stderr or ""):
+        return ("-fps_mode", "vfr")
+    return ("-vsync", "vfr")
 
 
 def _scale_filter(resolution: int) -> str:
@@ -253,7 +274,7 @@ def extract_scene_candidates(
     cmd += [
         "-i", str(Path(video_path).resolve()),
         "-vf", vf,
-        "-vsync", "vfr",
+        *_vfr_args(),
     ]
     if max_frames is not None:
         cmd += ["-frames:v", str(max_frames)]
@@ -612,7 +633,7 @@ def extract_keyframes(
         "-skip_frame", "nokey",
         "-i", str(Path(video_path).resolve()),
         "-vf", f"{_scale_filter(resolution)},showinfo",
-        "-vsync", "vfr",
+        *_vfr_args(),
         "-q:v", "4",
         output_pattern,
     ]
