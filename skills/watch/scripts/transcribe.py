@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """Parse a WebVTT subtitle file into a clean, timestamped transcript.
 
-YouTube auto-subs emit rolling-duplicate cues (each line appears 2-3 times as it
-scrolls). We dedupe consecutive identical cues and merge their time ranges.
+YouTube auto-subs scroll, so every spoken line is emitted three times: as the
+newly painted line of one cue, as a 10ms cue restating it once finished, and as
+the leading carry-over line of the next cue. Deduping on whole-cue text misses
+the third form, because there the overlap is the previous cue's *tail* against
+this cue's *head* -- which is what leaves "a b / b c / c d" in the transcript.
+So dedup works line by line, dropping the leading run a cue merely carries over,
+and only then applies the whole-text rules other caption sources need.
 """
 from __future__ import annotations
 
@@ -15,6 +20,9 @@ TS_RE = re.compile(
     r"(\d{2}):(\d{2}):(\d{2})[.,](\d{3})\s+-->\s+(\d{2}):(\d{2}):(\d{2})[.,](\d{3})"
 )
 TAG_RE = re.compile(r"<[^>]+>")
+# How many recently emitted lines a cue may carry over. YouTube rolls one or two
+# lines of context; a wider window would start matching unrelated repeats.
+ROLL_WINDOW = 4
 
 
 def _to_seconds(h: str, m: str, s: str, ms: str) -> float:
@@ -44,26 +52,53 @@ def parse_vtt(path: str) -> list[dict]:
                 cue_lines.append(cleaned)
             i += 1
 
-        cue_text = " ".join(cue_lines).strip()
-        if cue_text:
-            segments.append({"start": round(start, 2), "end": round(end, 2), "text": cue_text})
+        if cue_lines:
+            segments.append({"start": round(start, 2), "end": round(end, 2), "lines": cue_lines})
         i += 1
 
     return _dedupe(segments)
 
 
+def _strip_carryover(lines: list[str], emitted: list[str]) -> list[str]:
+    """Drop the leading lines that only repeat the tail already emitted.
+
+    Matches the longest run first, so a cue carrying over two lines is handled
+    as well as the usual one. Anchoring on the *leading* run is what keeps a
+    genuinely repeated line (a refrain, a repeated "thank you") from being
+    eaten: it is only dropped when it sits exactly where the scroll puts it.
+    """
+    for k in range(min(len(lines), len(emitted)), 0, -1):
+        if emitted[-k:] == lines[:k]:
+            return lines[k:]
+    return list(lines)
+
+
 def _dedupe(segments: list[dict]) -> list[dict]:
-    """Collapse rolling duplicates common in YouTube auto-subs."""
+    """Collapse the rolling duplicates YouTube auto-subs emit."""
     out: list[dict] = []
+    emitted: list[str] = []
     for seg in segments:
-        if out and seg["text"] == out[-1]["text"]:
+        fresh = _strip_carryover(seg["lines"], emitted)
+        if not fresh:
+            # Nothing new: a 10ms cue restating a finished line. Stretch the
+            # previous segment over it rather than emitting an empty one.
+            if out:
+                out[-1]["end"] = seg["end"]
+            continue
+        emitted.extend(fresh)
+        del emitted[:-ROLL_WINDOW]
+
+        text = " ".join(fresh).strip()
+        if not text:
+            continue
+        if out and text == out[-1]["text"]:
             out[-1]["end"] = seg["end"]
             continue
-        if out and seg["text"].startswith(out[-1]["text"] + " "):
-            out[-1]["text"] = seg["text"]
+        if out and text.startswith(out[-1]["text"] + " "):
+            out[-1]["text"] = text
             out[-1]["end"] = seg["end"]
             continue
-        out.append(seg)
+        out.append({"start": seg["start"], "end": seg["end"], "text": text})
     return out
 
 
