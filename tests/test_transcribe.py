@@ -116,3 +116,21 @@ past the minute mark
 """
     out = transcribe.format_transcript(transcribe.parse_vtt(_vtt(tmp_path, body)))
     assert out == "[01:05] past the minute mark"
+
+
+def test_html_entities_are_unescaped(tmp_path: Path):
+    """YouTube escapes its speaker-change marker as `&gt;&gt;`."""
+    body = """00:00:00.000 --> 00:00:02.000
+&gt;&gt; Ben &amp; Jerry said &quot;hello&quot;
+"""
+    segments = transcribe.parse_vtt(_vtt(tmp_path, body))
+    assert segments[0]["text"] == '>> Ben & Jerry said "hello"'
+
+
+def test_escaped_markup_is_not_eaten_as_a_tag(tmp_path: Path):
+    """Unescaping must run after tag stripping, or `&lt;b&gt;` would vanish."""
+    body = """00:00:00.000 --> 00:00:02.000
+use &lt;b&gt; for bold
+"""
+    segments = transcribe.parse_vtt(_vtt(tmp_path, body))
+    assert segments[0]["text"] == "use <b> for bold"

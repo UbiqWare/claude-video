@@ -11,6 +11,7 @@ and only then applies the whole-text rules other caption sources need.
 """
 from __future__ import annotations
 
+import html
 import re
 import sys
 from pathlib import Path
@@ -20,6 +21,11 @@ TS_RE = re.compile(
     r"(\d{2}):(\d{2}):(\d{2})[.,](\d{3})\s+-->\s+(\d{2}):(\d{2}):(\d{2})[.,](\d{3})"
 )
 TAG_RE = re.compile(r"<[^>]+>")
+# Cue payloads arrive HTML-escaped: YouTube writes the speaker-change marker as
+# `&gt;&gt;` and any literal ampersand as `&amp;`. Unescape *after* stripping
+# tags, never before -- an escaped `&lt;b&gt;` would otherwise turn into a real
+# `<b>` and be eaten as markup.
+
 # How many recently emitted lines a cue may carry over. YouTube rolls one or two
 # lines of context; a wider window would start matching unrelated repeats.
 ROLL_WINDOW = 4
@@ -47,7 +53,7 @@ def parse_vtt(path: str) -> list[dict]:
 
         cue_lines: list[str] = []
         while i < len(lines) and lines[i].strip():
-            cleaned = TAG_RE.sub("", lines[i]).strip()
+            cleaned = html.unescape(TAG_RE.sub("", lines[i])).strip()
             if cleaned:
                 cue_lines.append(cleaned)
             i += 1
