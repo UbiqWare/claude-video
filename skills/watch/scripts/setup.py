@@ -83,6 +83,11 @@ def _check_file_permissions(path: Path) -> None:
     key = str(path)
     if key in _PERM_WARNED:
         return
+    # Windows has no POSIX mode bits: Path.chmod(0o600) only toggles the
+    # read-only flag, so st_mode stays 0o666 and this check would warn on every
+    # run about a `chmod` the user cannot even run. ACLs are the mechanism there.
+    if os.name == "nt":
+        return
     try:
         mode = path.stat().st_mode
         if mode & 0o044:
