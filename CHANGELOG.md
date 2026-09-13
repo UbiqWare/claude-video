@@ -2,6 +2,23 @@
 
 All notable changes to `/watch` are documented here.
 
+## [0.4.1] — 2026-09-13
+
+### Fixed
+- **Rolling YouTube captions were duplicated.** The VTT parser now deduplicates line by line, so a
+  transcript no longer repeats each phrase as the caption window scrolls.
+- **HTML entities in captions** (`&amp;`, `&#39;`) are unescaped instead of appearing literally.
+- **ffmpeg 9 compatibility.** The `vfr` flag is resolved from the installed ffmpeg version rather
+  than assumed, which broke frame extraction on ffmpeg 9.
+- **Windows setup.** The POSIX permission check is skipped there instead of failing the setup.
+
+### Note on versioning
+These fixes had been sitting in `main` since 2026-08-27 with the manifest still declaring `0.4.0`.
+That is what this release corrects, and the policy is now explicit: **the `plugin.json` version goes
+up in every PR that touches code** — the tag accompanies it, it does not replace it. Otherwise the
+`plugins-check` hook that watches the team marketplaces cannot see the change, since it compares
+declared versions.
+
 ## [0.4.0] — 2026-08-12
 
 ### Changed
