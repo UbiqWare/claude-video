@@ -14,3 +14,7 @@ htmlcov/
 
 # local Claude Code settings
 .claude/settings.local.json
+
+# Ancla de sesión de Claude Code. El comodín va SIN extensión a propósito:
+# cubre la segunda cuenta (chat-id-devops.txt) y los backups (chat-id.txt.bak*).
+chat-id*
