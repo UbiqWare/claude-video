@@ -2,6 +2,15 @@
 
 All notable changes to `/watch` are documented here.
 
+## [0.4.2] — 2026-10-16
+
+### Fixed
+- **`UnicodeEncodeError` on Windows consoles.** Python opens stdout with the console code page
+  (cp1252), which cannot encode the `→` in the focus-range report, so `watch.py` crashed after the
+  download had finished. Every script entry point now reconfigures stdout/stderr to UTF-8.
+- **Version drift.** `SKILL.md` and `.codex-plugin/plugin.json` still declared `0.4.0`; all three
+  manifests now agree.
+
 ## [0.4.1] — 2026-09-13
 
 ### Fixed
