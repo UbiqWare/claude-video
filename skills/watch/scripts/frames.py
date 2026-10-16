@@ -704,6 +704,9 @@ def extract_keyframes(
 
 
 if __name__ == "__main__":
+    from config import force_utf8_stdio
+
+    force_utf8_stdio()
     if len(sys.argv) < 3:
         print(
             "usage: frames.py <video-path> <out-dir> [--fps F] [--resolution W] "

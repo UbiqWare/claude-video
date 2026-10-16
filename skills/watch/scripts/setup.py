@@ -30,7 +30,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
-from config import get_config  # noqa: E402
+from config import force_utf8_stdio, get_config  # noqa: E402
 from whisper import download_local_model, find_local_binary, local_model_name, local_model_path  # noqa: E402
 
 
@@ -429,6 +429,7 @@ def cmd_install() -> int:
 
 
 def main() -> int:
+    force_utf8_stdio()
     if len(sys.argv) > 1:
         arg = sys.argv[1]
         if arg == "--check":

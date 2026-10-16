@@ -3,7 +3,21 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
+
+
+def force_utf8_stdio() -> None:
+    """Make stdout/stderr UTF-8 so non-ASCII output cannot crash a script.
+
+    On Windows, Python opens the console streams with the ANSI code page
+    (cp1252), which cannot encode characters such as "→" used in the report.
+    The resulting UnicodeEncodeError fires after the download has finished,
+    throwing that work away. Call this first in every script entry point.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
 
 
 CONFIG_DIR = Path.home() / ".config" / "watch"
