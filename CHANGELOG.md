@@ -2,6 +2,16 @@
 
 All notable changes to `/watch` are documented here.
 
+## [0.4.3] — 2026-10-16
+
+### Fixed
+- **False permission warning on Windows.** The SessionStart hook no longer reports `.env has
+  permissions 644 (should be 600)` on Git Bash/MSYS/Cygwin, where `chmod 600` changes nothing.
+- **Windows setup hints.** The hook suggests `python` instead of `python3` (the Microsoft Store
+  stub); yt-dlp is offered through winget only, since `pip install --user` leaves it off PATH with
+  the Microsoft Store Python; and `setup.py --local` explains how to install `whisper-cli` from the
+  whisper.cpp `bNNNN` pre-releases.
+
 ## [0.4.2] — 2026-10-16
 
 ### Fixed

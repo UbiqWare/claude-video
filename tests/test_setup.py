@@ -78,3 +78,27 @@ def test_key_present_is_ready(tmp_path):
     assert js["status"] == "ready"
     assert js["can_proceed"] is True
     assert js["whisper_backend"] == "groq"
+
+
+def _import_setup():
+    sys.path.insert(0, str(SETUP.parent))
+    import setup as setup_mod
+    return setup_mod
+
+
+def test_windows_install_hint_does_not_suggest_pip_user():
+    # `pip install --user` with the Microsoft Store Python leaves yt-dlp off PATH.
+    hint = _import_setup()._install_hint_windows(["ffmpeg", "yt-dlp"])
+    assert "winget install yt-dlp.yt-dlp" in hint
+    assert "pip" not in hint
+
+
+def test_local_on_windows_explains_how_to_get_whisper_cli(monkeypatch, capsys):
+    setup_mod = _import_setup()
+    monkeypatch.setattr(setup_mod, "_check_binaries", lambda: [])
+    monkeypatch.setattr(setup_mod, "find_local_binary", lambda: None)
+    monkeypatch.setattr(setup_mod.platform, "system", lambda: "Windows")
+    assert setup_mod.cmd_local() == 2
+    err = capsys.readouterr().err
+    assert "whisper-bin-x64.zip" in err
+    assert "Release\\" in err
