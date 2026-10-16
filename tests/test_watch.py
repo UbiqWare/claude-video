@@ -86,3 +86,19 @@ def test_no_dedup_preserves_static_frames(static_clip: Path):
     out = _run(static_clip, "--no-dedup")
     assert "near-duplicate" not in out
     assert _frame_lines(out) > 1
+
+
+def test_focus_range_report_survives_legacy_console_encoding(cut_clip: Path):
+    # Windows consoles default to cp1252, which cannot encode the "→" used in
+    # the focus-range report. Force that encoding so the regression shows on
+    # every OS, and decode the raw bytes ourselves.
+    env = dict(os.environ)
+    env.pop("WATCH_DETAIL", None)
+    env.pop("PYTHONUTF8", None)
+    env["PYTHONIOENCODING"] = "cp1252"
+    proc = subprocess.run(
+        [sys.executable, str(WATCH), str(cut_clip), "--no-whisper", "--start", "0", "--end", "2"],
+        capture_output=True, env=env,
+    )
+    assert proc.returncode == 0, proc.stderr.decode("utf-8", "replace")
+    assert "→" in proc.stdout.decode("utf-8")

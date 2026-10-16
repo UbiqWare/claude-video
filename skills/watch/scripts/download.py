@@ -223,6 +223,9 @@ def download(
 
 
 if __name__ == "__main__":
+    from config import force_utf8_stdio
+
+    force_utf8_stdio()
     if len(sys.argv) < 3:
         print("usage: download.py <url-or-path> <out-dir>", file=sys.stderr)
         raise SystemExit(2)
