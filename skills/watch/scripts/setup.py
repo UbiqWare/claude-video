@@ -251,7 +251,8 @@ def _install_hint_windows(missing: list[str]) -> str:
     if "ffmpeg" in pkgs:
         hints.append("winget: `winget install Gyan.FFmpeg`")
     if "yt-dlp" in pkgs:
-        hints.append("winget: `winget install yt-dlp.yt-dlp` or pip: `pip install --user yt-dlp`")
+        # Not `pip install --user`: with the Microsoft Store Python its Scripts\n        # folder is not on PATH, so yt-dlp stays "missing" after installing it.
+        hints.append("winget: `winget install yt-dlp.yt-dlp`")
     return "\n  ".join(hints) if hints else "nothing to install"
 
 
@@ -336,6 +337,18 @@ def cmd_check() -> int:
     return 3
 
 
+def _whisper_hint_windows() -> str:
+    # whisper.cpp has no winget package. Windows binaries ship only in the
+    # `bNNNN` pre-releases (e.g. b5454), not in the `vX.Y.Z` tags.
+    return (
+        "  1. Download whisper-bin-x64.zip from the latest `bNNNN` pre-release at\n"
+        "     https://github.com/ggml-org/whisper.cpp/releases\n"
+        "  2. Unzip it to %LOCALAPPDATA%\\Programs\\whisper.cpp\n"
+        "  3. Add its Release\\ folder (holds whisper-cli.exe) to your user PATH\n"
+        "  4. Open a new terminal and re-run: python setup.py --local"
+    )
+
+
 def cmd_local() -> int:
     """Install and configure the local whisper.cpp multilingual backend."""
     missing = _check_binaries()
@@ -357,6 +370,8 @@ def cmd_local() -> int:
                 return 2
         else:
             print("[setup] whisper.cpp (`whisper-cli`) is not installed.", file=sys.stderr)
+            if platform.system() == "Windows":
+                print(_whisper_hint_windows(), file=sys.stderr)
             return 2
 
     _scaffold_env()
